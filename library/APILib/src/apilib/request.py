@@ -52,16 +52,17 @@ class Request:
     def _parse_endpoint(url:str, query_string: Dict[str, str] = None) -> Endpoint:
 
         scheme = "http" # default scheme
-        _url = url
+        _url = url + "/" if not url.endswith("/") else ""
         try:
             scheme, _url = url.split("://")
         except Exception:
             #Log warning that default scheme `http` will be used.
             pass
 
-        _url_split = _url.split("/")
-        hostname, port = _url_split[0].split(":")
-        path = "/".join(_url_split[1:])
+        _host_port, *path_list = _url.split("/")
+
+        hostname, port = _host_port.split(":") if ":" in _host_port else _host_port, None
+        path = "/".join(path_list)
 
         #ToDo: Validate and set url
 
@@ -95,11 +96,10 @@ class Request:
             port=endpoint.port
         )
         try:
-            if headers:
-                for key, value in headers.values():
-                    connection.putheader(key, value)
-            connection.putrequest(method=method, url=endpoint.path)
+
+            connection.request(method=method, url=endpoint.path, headers=headers)
             response = connection.getresponse()
+
             return response
         except Exception as e:
             raise e
@@ -111,12 +111,6 @@ class Request:
     def get(self, url:str, query_string: Dict[str, str] = None):
         self.method = Method.GET
         endpoint = self._parse_endpoint(url, query_string)
-        # self.body = self._prepare_body()
         headers = {}
 
         return self.request(endpoint, Method.GET, headers)
-
-
-
-print(Request()._parse_endpoint("http://www.example.com:9090/test",{"key": "234", "key2": "567"}))
-print(Request().get("http://www.example.com:9090/test"))
